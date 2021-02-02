@@ -1,140 +1,131 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
 { config, pkgs, ... }:
 
 {
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      ./wm/xmonad.nix
     ];
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  ###########################################################################
+  ## General
+  ###########################################################################
 
-  networking.hostName = "emm218"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  system.stateVersion = "20.03"; 
+
+  nix.gc.automatic = true;
+  nix.optimise.automatic = true;
+
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true
+  
+  # English locale with chinese input
+  i18n = {
+    defaultLocale = "en_US.UTF-8";
+    inputMethod = {
+      enabled = "ibus";
+      ibus.engines = with pkgs.ibus-engines; [ libpinyin ];
+    };
+  };
+  console = {
+     font = "Lat2-Terminus16";
+     keyMap = "us";
+  };
+
+  # Time
+  time.timeZone = "America/New_York";
+  
+  ###########################################################################
+  ## Networking
+  ###########################################################################
+  
+  networking.hostName = "emm218";
   networking.networkmanager.enable = true;
   networking.usePredictableInterfaceNames = false;
   programs.nm-applet.enable = true;
 
-  # The global useDHCP flag is deprecated, therefore explicitly set to false here.
-  # Per-interface useDHCP will be mandatory in the future, so this generated config
-  # replicates the default behaviour.
   networking.useDHCP = false;
   networking.interfaces.eth0.useDHCP = true;
   networking.interfaces.wlan0.useDHCP = true;
-
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
-  # Select internationalisation properties.
-  # i18n.defaultLocale = "en_US.UTF-8";
-  # console = {
-  #   font = "Lat2-Terminus16";
-  #   keyMap = "us";
-  # };
-
-  i18n.inputMethod.enabled = "ibus";
-  i18n.inputMethod.ibus.engines = with pkgs.ibus-engines; [ libpinyin ];
-
-  # Set your time zone.
-  time.timeZone = "America/New_York";
-
+  
+  ###########################################################################
+  ## Package Management
+  ###########################################################################
+  
+  # Allow unfree packages (for discord and zoom)
   nixpkgs.config.allowUnfree = true;
 
   #installing flatpak for sandboxing zoom (bleh)
   xdg.portal.enable = true;
   services.flatpak.enable = true;
 
-  #pinentry flavor setting
-  programs.gnupg.agent.pinentryFlavor = "curses";
-
   # List packages installed in system profile. To search, run:
-  # $ nix search wget
   environment.systemPackages = with pkgs; [
-     wget
-     emacs
-     git
-     firefox
-     gnupg
-     pinentry
-     gnome3.gnome-keyring
-     libsForQt5.vlc
-     unzip
-     discord
-     steam-run
-     hugo
-     jetbrains.idea-community
-     maven
+    discord
+    emacs
+    firefox
+    gimp
+    git
+    gnome3.gnome-keyring
+    gnupg
+    hugo
+    inkscape
+    jetbrains.idea-community
+    keepassxc
+    maven
+    pinentry
+    praat
+    rhythmbox
+    sbcl
+    unzip
+    usbutils
+    wget
+    wine
   ];
 
   fonts.fonts = with pkgs; [
+     liberation_ttf
+     noto-fonts
+     source-han-serif-simplified-chinese
      terminus_font
      terminus_font_ttf
-     noto-fonts
-     liberation_ttf
-     source-han-serif-simplified-chinese
   ];
+  
+  programs.gnupg.agent = {
+     enable = true;
+     enableSSHSupport = true;
+     pinentryFlavor = "curses";
+  };
 
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  #   pinentryFlavor = "gnome3";
-  # };
+  ###########################################################################
+  ## Services
+  ###########################################################################
+  
+  services.openssh = {
+    enable = true;
 
-  # List services that you want to enable:
+    # Only pubkey auth
+    passwordAuthentication = false;
+    challengeResponseAuthentication = false;
+  };
 
-  # Enable the OpenSSH daemon.
-  # services.openssh.enable = true;
+  programs.ssh.startAgent = true;
 
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
-
-  # Enable CUPS to print documents.
-  services.printing.enable = true;
-
-  # Enable sound.
-  sound.enable = true;
-  hardware.pulseaudio.enable = true;
-
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
-  services.xserver.layout = "us";
-  services.xserver.xkbOptions = "eurosign:e";
-
-  # Enable touchpad support.
-  services.xserver.libinput.enable = true;
-
-  services.xserver.desktopManager.xfce.enable = true;
-  services.xserver.displayManager.defaultSession = "xfce";
-
-  hardware.logitech.enable = true;
-
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+  ###########################################################################
+  ## Users
+  ###########################################################################
+  
   users.users.emmy = {
      isNormalUser = true;
      uid = 1001;
      home = "/home/emmy"; 
-     extraGroups = [ "wheel" "networkmanager" "audio"]; # Enable ‘sudo’ for the user.
-  };
+     extraGroups = [ "wheel" "networkmanager" "audio"];
 
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "20.03"; # Did you read the comment?
+     #a place to put my public keys so I can authenticate with ssh
+     openssh.authorizedKeys.keys = [
+
+     ];
+  };
 
 }
 
